@@ -24,6 +24,11 @@ class GeoFirePoint {
     return _util.encode(this.latitude, this.longitude, 9);
   }
 
+  /// return base 4 hash of [GeoFirePoint]
+  String get hash4 {
+    return Util.encode4(this.latitude, this.longitude, 20);
+  }
+
   /// return all neighbors of [GeoFirePoint]
   List<String> get neighbors {
     return _util.neighbors(this.hash);

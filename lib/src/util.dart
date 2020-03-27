@@ -17,7 +17,7 @@ class Util {
     }
   }
 
-  var encodeAuto = 'auto';
+  static var encodeAuto = 'auto';
 
   ///
   /// Significant Figure Hash Length
@@ -30,13 +30,13 @@ class Util {
   /// the geohash.
   /// @type Array
   // Desired sig figs:    0  1  2  3   4   5   6   7   8   9  10
-  var sigfigHashLength = [0, 5, 7, 8, 11, 12, 13, 15, 16, 17, 18];
+  static var sigfigHashLength = [0, 5, 7, 8, 11, 12, 13, 15, 16, 17, 18];
 
   ///
   /// Encode
   /// Create a geohash from latitude and longitude
   /// that is 'number of chars' long
-  String encode(var latitude, var longitude, var numberOfChars) {
+  static String encode4(var latitude, var longitude, var numberOfChars) {
     if (numberOfChars == encodeAuto) {
       if (latitude.runtimeType == double || longitude.runtimeType == double) {
         throw new Exception('string notation required for auto precision.');
@@ -86,7 +86,7 @@ class Util {
     return chars.join('');
   }
 
-  String encode32(var latitude, var longitude, var numberOfChars) {
+  String encode(var latitude, var longitude, var numberOfChars) {
     if (numberOfChars == encodeAuto) {
       if (latitude.runtimeType == double || longitude.runtimeType == double) {
         throw new Exception('string notation required for auto precision.');
