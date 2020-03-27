@@ -2,7 +2,13 @@ import 'dart:math';
 import 'package:geoflutterfire/src/point.dart';
 
 class Util {
+  /*
+  ** Changed from using 32 bits to only using 16 bits while encoding geohashes.
+  ** --> spread relevant information to more chars (one char having only half the information)
+  */
   static const BASE32_CODES = '0123456789bcdefghjkmnpqrstuvwxyz';
+  static const BASE16_CODES = '0123456789bcdefg';
+  static const BASE4_CODES = '01ab';
   Map<String, int> base32CodesDic = new Map();
 
   Util() {
@@ -31,6 +37,56 @@ class Util {
   /// Create a geohash from latitude and longitude
   /// that is 'number of chars' long
   String encode(var latitude, var longitude, var numberOfChars) {
+    if (numberOfChars == encodeAuto) {
+      if (latitude.runtimeType == double || longitude.runtimeType == double) {
+        throw new Exception('string notation required for auto precision.');
+      }
+      int decSigFigsLat = latitude.split('.')[1].length;
+      int decSigFigsLon = longitude.split('.')[1].length;
+      int numberOfSigFigs = max(decSigFigsLat, decSigFigsLon);
+      numberOfChars = sigfigHashLength[numberOfSigFigs];
+    } else if (numberOfChars == null) {
+      numberOfChars = 18;
+    }
+
+    var chars = [], bits = 0, bitsTotal = 0, hashValue = 0;
+    double maxLat = 90, minLat = -90, maxLon = 180, minLon = -180, mid;
+
+    while (chars.length < numberOfChars) {
+      if (bitsTotal % 2 == 0) {
+        mid = (maxLon + minLon) / 2;
+        if (longitude > mid) {
+          hashValue = (hashValue << 1) + 1;
+          minLon = mid;
+        } else {
+          hashValue = (hashValue << 1) + 0;
+          maxLon = mid;
+        }
+      } else {
+        mid = (maxLat + minLat) / 2;
+        if (latitude > mid) {
+          hashValue = (hashValue << 1) + 1;
+          minLat = mid;
+        } else {
+          hashValue = (hashValue << 1) + 0;
+          maxLat = mid;
+        }
+      }
+
+      bits++;
+      bitsTotal++;
+      if (bits == 2) {
+        var code = BASE4_CODES[hashValue];
+        chars.add(code);
+        bits = 0;
+        hashValue = 0;
+      }
+    }
+
+    return chars.join('');
+  }
+
+  String encode32(var latitude, var longitude, var numberOfChars) {
     if (numberOfChars == encodeAuto) {
       if (latitude.runtimeType == double || longitude.runtimeType == double) {
         throw new Exception('string notation required for auto precision.');
@@ -253,21 +309,39 @@ class Util {
         location2.latitude, location2.longitude);
   }
 
-  static double calcDistance(
-      double lat1, double long1, double lat2, double long2) {
-    // Earth's mean radius in meters
-    final double radius = (EARTH_EQ_RADIUS + EARTH_POLAR_RADIUS) / 2;
-    double latDelta = _toRadians(lat1 - lat2);
-    double lonDelta = _toRadians(long1 - long2);
+  // static double calcDistance(
+  //     double lat1, double long1, double lat2, double long2) {
+  //   // Earth's mean radius in meters
+  //   final double radius = (EARTH_EQ_RADIUS + EARTH_POLAR_RADIUS) / 2;
+  //   double latDelta = _toRadians(lat1 - lat2);
+  //   double lonDelta = _toRadians(long1 - long2);
 
-    double a = (sin(latDelta / 2) * sin(latDelta / 2)) +
-        (cos(_toRadians(lat1)) *
-            cos(_toRadians(lat2)) *
-            sin(lonDelta / 2) *
-            sin(lonDelta / 2));
-    double distance = radius * 2 * atan2(sqrt(a), sqrt(1 - a)) / 1000;
-    return double.parse(distance.toStringAsFixed(3));
-  }
+  //   double a = (sin(latDelta / 2) * sin(latDelta / 2)) +
+  //       (cos(_toRadians(lat1)) *
+  //           cos(_toRadians(lat2)) *
+  //           sin(lonDelta / 2) *
+  //           sin(lonDelta / 2));
+  //   double distance = radius * 2 * atan2(sqrt(a), sqrt(1 - a)) / 1000;
+  //   return double.parse(distance.toStringAsFixed(3));
+  // }
+
+  static double calcDistance(
+  double lat1, double long1, double lat2, double long2) {
+  // Earth's mean radius in meters
+  final double radius1 = ((90-lat1)/90).abs() * EARTH_EQ_RADIUS + ((0-lat1)/90).abs() * EARTH_POLAR_RADIUS;
+  final double radius2 = ((90-lat2)/90).abs() * EARTH_EQ_RADIUS + ((0-lat2)/90).abs() * EARTH_POLAR_RADIUS;
+  final double radius = (radius1 + radius2) / 2;
+  double latDelta = _toRadians(lat1 - lat2);
+  double lonDelta = _toRadians(long1 - long2);
+
+  double a = (sin(latDelta / 2) * sin(latDelta / 2)) +
+    (cos(_toRadians(lat1)) *
+     cos(_toRadians(lat2)) *
+     sin(lonDelta / 2) *
+     sin(lonDelta / 2));
+  double distance = radius * 2 * atan2(sqrt(a), sqrt(1 - a)) / 1000;
+  return double.parse(distance.toStringAsFixed(3));
+}
 
   static double _toRadians(double num) {
     return num * (pi / 180.0);
